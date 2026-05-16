@@ -54,9 +54,7 @@
         .mode-selector input:checked + span { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: bold; }
         .mode-selector span { display: block; padding: 4px 10px; border-radius: 4px; }
 
-        /* ========================================================
-           ★全表示モーダル専用：画像サイズ維持、余白とボタンを極限まで詰める
-           ======================================================== */
+        /* 全表示モーダル専用：高さを最適化 */
         #fullSorterList {
             grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)) !important;
             gap: 6px !important;
@@ -65,25 +63,25 @@
         #fullSorterList .preview-item {
             flex: none !important;
             width: 92px !important;
-            height: 122px !important; /* 全体の縦をギュッと詰める */
-            padding: 3px 4px !important;
+            height: 96px !important; 
+            padding: 2px 4px !important;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            justify-content: flex-start !important; /* 上詰めに配置 */
-            gap: 2px !important; /* 要素間のスキマをゼロに近く */
+            justify-content: flex-start !important; 
+            gap: 1px !important; 
         }
         #fullSorterList .preview-item-img-box {
-            width: 82px !important; /* イラストの大きさはしっかりキープ */
+            width: 82px !important; 
             height: 62px !important;
-            margin-bottom: 2px;
+            margin-bottom: 0px !important;
         }
         #fullSorterList .preview-item div {
             font-size: 9px !important;
             line-height: 1.1 !important;
-            margin: 0 !important; /* 文字の上下余白を完全カット */
+            margin: 0 !important; 
         }
         #fullSorterList .btn-group {
             gap: 1px !important;
-            margin-top: auto; /* ボタンは一番下にピタッとくっつける */
+            margin-top: 2px !important; 
         }
         #fullSorterList .tab-btn {
             font-size: 8px !important;
@@ -113,9 +111,8 @@
             .tab-btn { font-size: 8px; padding: 2px 0; }
             
             #sorterOverlay { padding: 8px; }
-            /* 全表示スマホ時のグリッド（画像サイズを保ちつつ隙間をカット） */
             #fullSorterList { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)) !important; gap: 4px !important; padding: 6px !important; }
-            #fullSorterList .preview-item { width: 84px !important; height: 114px !important; }
+            #fullSorterList .preview-item { width: 84px !important; height: 86px !important; } 
             #fullSorterList .preview-item-img-box { width: 74px !important; height: 54px !important; }
 
             button { padding: 10px 14px; font-size: 14px; }
@@ -181,14 +178,16 @@
     <div id="fullSorterList" class="sorter-container" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid;"></div>
 </div>
 
+<!-- 画像調整モーダル -->
 <div id="subEditorModal">
     <div class="modal-inner">
         <h4 id="subEditorTitle">画像調整</h4>
         <div class="checkerboard" style="display:inline-block; border:1px solid #999; overflow: hidden;">
             <canvas id="subCanvas" style="cursor:move; vertical-align: bottom;"></canvas>
         </div>
-        <p style="font-size: 11px; color: #666; margin: 10px 0;">ホイール：拡大縮小 / ドラッグ：移動</p>
+        <p style="font-size: 11px; color: #666; margin: 10px 0;">PC：ホイールで拡大縮小 / スマホ：2本指ピンチで拡大縮小</p>
         <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="resetSubFit()" class="dark">枠に合わせる</button>
             <button onclick="closeSubModal()" class="secondary">キャンセル</button>
             <button onclick="confirmSubImage()" class="blue">確定</button>
         </div>
@@ -270,14 +269,13 @@
         updateView(); refreshPreview(); updateStatusDisplay();
     };
 
-    // ★Sortable設定：スマホでのスクロール誤爆を防ぐため delay と touchStartThreshold を追加
     const sortConfig = {
         animation: 150,
         filter: '.del-btn',
         preventOnFilter: false,
-        delay: 200,              // スマホのみ0.2秒の長押しでドラッグ開始に
-        delayOnTouchOnly: true,  // ディレイをタッチ操作（スマホ）だけに適用。PCは即ドラッグ可能
-        touchStartThreshold: 5,  // 指が5px以上動いたら通常のスクロール（スワイプ）とみなす
+        delay: 200,              
+        delayOnTouchOnly: true,  
+        touchStartThreshold: 5,  
         onEnd: function() {
             const list = this.el.id === 'fullSorterList' ? fullSorterList : globalPreviewContainer;
             const ids = Array.from(list.children).map(el => el.dataset.orderId);
@@ -472,15 +470,21 @@
         if(isTab) subCanvas.height = 74;
         
         tImg.onload = () => {
-            ts = Math.max(subCanvas.width / tImg.width, subCanvas.height / tImg.height);
-            tx = (subCanvas.width - tImg.width * ts) / 2;
-            ty = (subCanvas.height - tImg.height * ts) / 2;
-            drawSub();
+            resetSubFit();
             document.getElementById('subEditorModal').style.display = 'flex';
         };
         tImg.src = dataUrl;
         if(type === 'main') lastMainDataUrl = dataUrl; else lastTabDataUrl = dataUrl;
     }
+
+    // ★枠に合わせる（初期化・リセット機能）
+    window.resetSubFit = () => {
+        if (!tImg.src) return;
+        ts = Math.max(subCanvas.width / tImg.width, subCanvas.height / tImg.height);
+        tx = (subCanvas.width - tImg.width * ts) / 2;
+        ty = (subCanvas.height - tImg.height * ts) / 2;
+        drawSub();
+    };
 
     function drawSub() {
         sctx.clearRect(0,0,subCanvas.width,subCanvas.height);
@@ -489,10 +493,63 @@
 
     subCanvas.onwheel = (e) => { e.preventDefault(); ts *= e.deltaY > 0 ? 0.9 : 1.1; drawSub(); };
     
+    // ★スマホ向けのピンチイン・アウト（2本指でのズーム）とドラッグ移動の両立
     let subM = false; let lastSubX = 0, lastSubY = 0;
-    function onSubStart(e) { subM = true; const pos = e.touches ? e.touches[0] : e; lastSubX = pos.clientX; lastSubY = pos.clientY; if(e.cancelable) e.preventDefault(); }
-    function onSubMove(e) { if(!subM) return; if(e.cancelable) e.preventDefault(); const pos = e.touches ? e.touches[0] : e; const dx = pos.clientX - lastSubX, dy = pos.clientY - lastSubY; tx += dx; ty += dy; lastSubX = pos.clientX; lastSubY = pos.clientY; drawSub(); }
-    function onSubEnd() { subM = false; }
+    let isPinching = false; let startDist = 0; let startScale = 1;
+
+    function onSubStart(e) {
+        if (e.touches && e.touches.length === 2) {
+            isPinching = true; subM = false;
+            startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            startScale = ts;
+            if(e.cancelable) e.preventDefault();
+            return;
+        }
+        isPinching = false; subM = true;
+        const pos = e.touches ? e.touches[0] : e;
+        lastSubX = pos.clientX; lastSubY = pos.clientY;
+        if(e.cancelable) e.preventDefault();
+    }
+
+    function onSubMove(e) {
+        if (e.touches && e.touches.length === 2 && isPinching) {
+            if(e.cancelable) e.preventDefault();
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            if (startDist > 0) {
+                const rect = subCanvas.getBoundingClientRect();
+                const cx = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+                const cy = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+                const canvasCx = cx * (subCanvas.width / rect.width);
+                const canvasCy = cy * (subCanvas.height / rect.height);
+                const imgX = (canvasCx - tx) / ts;
+                const imgY = (canvasCy - ty) / ts;
+
+                ts = startScale * (dist / startDist);
+                tx = canvasCx - imgX * ts;
+                ty = canvasCy - imgY * ts;
+                drawSub();
+            }
+            return;
+        }
+        if(!subM || isPinching) return;
+        if(e.cancelable) e.preventDefault();
+        const pos = e.touches ? e.touches[0] : e;
+        const dx = pos.clientX - lastSubX, dy = pos.clientY - lastSubY;
+        tx += dx; ty += dy;
+        lastSubX = pos.clientX; lastSubY = pos.clientY;
+        drawSub();
+    }
+
+    function onSubEnd(e) {
+        if (e.touches && e.touches.length > 0) {
+            if (e.touches.length === 1) {
+                isPinching = false; subM = true;
+                lastSubX = e.touches[0].clientX; lastSubY = e.touches[0].clientY;
+            }
+        } else {
+            subM = false; isPinching = false;
+        }
+    }
 
     subCanvas.addEventListener('mousedown', onSubStart);
     subCanvas.addEventListener('touchstart', onSubStart, { passive: false });
