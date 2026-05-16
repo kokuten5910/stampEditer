@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINE クリエイターズエディタ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/gauge.js/1.3.7/gauge.min.js"></script>
@@ -18,6 +19,7 @@
         .preview-section { background: #fff; margin-top: 10px; padding: 10px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); flex-shrink: 0; overflow: hidden; }
         .preview-list { display: flex; flex-wrap: nowrap; overflow-x: auto !important; gap: 15px; padding: 15px 10px; background: #fafafa; border-radius: 8px; min-height: 160px; }
         
+        /* 通常のプレビューアイテム設定 */
         .preview-item { position: relative; flex: 0 0 100px !important; width: 100px; height: 150px; background: #fff; border: 1px solid #ddd; cursor: grab; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px; box-sizing: border-box; border-radius: 6px; }
         .preview-item-img-box { width: 80px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 2px; }
         .preview-item-img-box img { max-width: 100%; max-height: 100%; }
@@ -27,8 +29,6 @@
         
         .btn-group { display: flex; gap: 2px; width: 100%; }
         .tab-btn { font-size: 9px; padding: 2px 0; cursor: pointer; background: #f8f8f8; border: 1px solid #ccc; flex: 1; border-radius: 4px; }
-        .active-gold { background: #ffc107 !important; border-color: #e0a800 !important; font-weight: bold; }
-        .active-blue { background: #007bff !important; border-color: #0056b3 !important; color: #fff !important; font-weight: bold; }
 
         /* ステータス周りのスタイル */
         .status-box { display: flex; gap: 10px; align-items: center; background: #f9f9f9; padding: 5px 12px; border-radius: 10px; border: 1px solid #ddd; }
@@ -53,6 +53,73 @@
         .mode-selector input { display: none; }
         .mode-selector input:checked + span { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: bold; }
         .mode-selector span { display: block; padding: 4px 10px; border-radius: 4px; }
+
+        /* ========================================================
+           ★全表示モーダル専用：画像サイズ維持、余白とボタンを極限まで詰める
+           ======================================================== */
+        #fullSorterList {
+            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)) !important;
+            gap: 6px !important;
+            padding: 10px !important;
+        }
+        #fullSorterList .preview-item {
+            flex: none !important;
+            width: 92px !important;
+            height: 122px !important; /* 全体の縦をギュッと詰める */
+            padding: 3px 4px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            justify-content: flex-start !important; /* 上詰めに配置 */
+            gap: 2px !important; /* 要素間のスキマをゼロに近く */
+        }
+        #fullSorterList .preview-item-img-box {
+            width: 82px !important; /* イラストの大きさはしっかりキープ */
+            height: 62px !important;
+            margin-bottom: 2px;
+        }
+        #fullSorterList .preview-item div {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+            margin: 0 !important; /* 文字の上下余白を完全カット */
+        }
+        #fullSorterList .btn-group {
+            gap: 1px !important;
+            margin-top: auto; /* ボタンは一番下にピタッとくっつける */
+        }
+        #fullSorterList .tab-btn {
+            font-size: 8px !important;
+            padding: 1px 0 !important;
+        }
+        #fullSorterList .del-btn {
+            width: 18px !important;
+            height: 18px !important;
+            font-size: 10px !important;
+        }
+
+        /* スマホ向けレスポンシブスタイル */
+        @media (max-width: 768px) {
+            body { height: auto; overflow: auto; padding: 5px; }
+            .header { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px; height: auto; }
+            .header > div { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; width: 100%; }
+            .header h3 { font-size: 16px; }
+            .main-container { flex-direction: column; height: auto; overflow: visible; gap: 10px; }
+            .editor-area { height: 45vh; min-height: 260px; flex: none; width: 100%; }
+            .side-panel { max-width: none; min-width: 0; flex: none; width: 100%; padding: 10px; box-sizing: border-box; }
+            .preview-section { position: sticky; bottom: 0; background: #fff; z-index: 1000; margin-top: 10px; padding: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.15); }
+            .preview-list { min-height: 130px; padding: 10px 5px; gap: 10px; }
+            .preview-item { flex: 0 0 85px !important; width: 85px; height: 135px; padding: 3px; }
+            
+            .preview-item .del-btn { width: 26px; height: 26px; font-size: 14px; border-radius: 0 6px 0 10px; }
+            .preview-item-img-box { width: 70px; height: 50px; }
+            .tab-btn { font-size: 8px; padding: 2px 0; }
+            
+            #sorterOverlay { padding: 8px; }
+            /* 全表示スマホ時のグリッド（画像サイズを保ちつつ隙間をカット） */
+            #fullSorterList { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)) !important; gap: 4px !important; padding: 6px !important; }
+            #fullSorterList .preview-item { width: 84px !important; height: 114px !important; }
+            #fullSorterList .preview-item-img-box { width: 74px !important; height: 54px !important; }
+
+            button { padding: 10px 14px; font-size: 14px; }
+        }
     </style>
 </head>
 <body>
@@ -71,7 +138,6 @@
         <button id="undoBtn" class="dark" disabled>↩️</button>
         <button id="resetOrder" class="red">📍 確定</button>
         
-        <!-- メイン・タブ画像プレビューエリア -->
         <div class="status-box">
             <div id="mainStatusItem" class="status-item">
                 <span class="status-label">メイン</span>
@@ -87,7 +153,6 @@
 
         <button id="openSorter" class="orange">🔃 全表示</button>
         <button id="downloadZip" class="blue">ZIP保存</button>
-
     </div>
 </div>
 
@@ -107,13 +172,13 @@
     <div id="globalPreview" class="preview-list"></div>
 </div>
 
-<!-- モーダル等は前回と同様 -->
+<!-- 全表示モーダル -->
 <div id="sorterOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:#fff;">
-        <h2 style="margin:0;">並べ替え</h2>
+        <h2 style="margin:0;">並べ替え（一覧）</h2>
         <button onclick="closeSorter()" style="background:#fff; color:#000;">完了</button>
     </div>
-    <div id="fullSorterList" class="sorter-container" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; justify-items:center;"></div>
+    <div id="fullSorterList" class="sorter-container" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid;"></div>
 </div>
 
 <div id="subEditorModal">
@@ -144,12 +209,10 @@
     let finalMainBlob = null, lastMainDataUrl = null;
     let subEditingTarget = 'tab'; 
 
-    // 横スクロール
     globalPreviewContainer.addEventListener('wheel', (e) => {
         if (e.deltaY !== 0) { e.preventDefault(); globalPreviewContainer.scrollLeft += e.deltaY; }
     }, { passive: false });
 
-    // モード切替
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (projects.length > 0 && !confirm("モードを切り替えると枠の設定がリセットされます。")) {
@@ -168,7 +231,6 @@
         updateStatusDisplay();
     }
 
-    // 別アップロード処理
     document.getElementById('mainSpecificUpload').onchange = (e) => handleSpecificFile(e, 'main');
     document.getElementById('tabSpecificUpload').onchange = (e) => handleSpecificFile(e, 'tab');
 
@@ -183,11 +245,9 @@
         reader.readAsDataURL(e.target.files[0]);
     }
 
-    // サムネイルクリックで再編集
     document.getElementById('mainThumb').onclick = () => { if(lastMainDataUrl) openSubEditor('external', lastMainDataUrl, 'main'); };
     document.getElementById('tabThumb').onclick = () => { if(lastTabDataUrl) openSubEditor('external', lastTabDataUrl, 'tab'); };
 
-    // 履歴・基本機能
     let history = [];
     function saveState() {
         history.push({
@@ -210,8 +270,14 @@
         updateView(); refreshPreview(); updateStatusDisplay();
     };
 
+    // ★Sortable設定：スマホでのスクロール誤爆を防ぐため delay と touchStartThreshold を追加
     const sortConfig = {
         animation: 150,
+        filter: '.del-btn',
+        preventOnFilter: false,
+        delay: 200,              // スマホのみ0.2秒の長押しでドラッグ開始に
+        delayOnTouchOnly: true,  // ディレイをタッチ操作（スマホ）だけに適用。PCは即ドラッグ可能
+        touchStartThreshold: 5,  // 指が5px以上動いたら通常のスクロール（スワイプ）とみなす
         onEnd: function() {
             const list = this.el.id === 'fullSorterList' ? fullSorterList : globalPreviewContainer;
             const ids = Array.from(list.children).map(el => el.dataset.orderId);
@@ -258,41 +324,21 @@
         return boxes;
     }
 
-   function addRegionBox(startX, startY, ow, oh, arr, imgW, imgH, ratio) {
-    const padding = 2; // 2pxの余白
-
-    // 1. イラストのサイズに余白（左右/上下で計4px）を加えた「必要最小限の枠サイズ」を計算
-    let paddedW = ow + (padding * 2);
-    let paddedH = oh + (padding * 2);
-
-    // 2. アスペクト比に合わせて、枠の幅(bw)と高さ(bh)を決定
-    let bw, bh;
-    if (paddedW / paddedH > ratio) {
-        // 横が長い場合、幅を基準に高さを決める
-        bw = paddedW;
-        bh = paddedW / ratio;
-    } else {
-        // 縦が長い場合、高さを基準に幅を決める
-        bh = paddedH;
-        bw = paddedH * ratio;
+    function addRegionBox(startX, startY, ow, oh, arr, imgW, imgH, ratio) {
+        const padding = 2; 
+        let paddedW = ow + (padding * 2);
+        let paddedH = oh + (padding * 2);
+        let bw, bh;
+        if (paddedW / paddedH > ratio) { bw = paddedW; bh = paddedW / ratio; } 
+        else { bh = paddedH; bw = paddedH * ratio; }
+        let sx = startX - padding - (bw - paddedW) / 2;
+        let sy = startY - padding - (bh - paddedH) / 2;
+        if (bw > imgW) { bw = imgW; sx = 0; bh = bw / ratio; }
+        if (bh > imgH) { bh = imgH; sy = 0; bw = bh * ratio; }
+        sx = Math.max(0, Math.min(sx, imgW - bw));
+        sy = Math.max(0, Math.min(sy, imgH - bh));
+        arr.push({ x: sx, y: sy, w: bw, h: bh, id: ++globalIdCounter });
     }
-
-    // 3. イラストが枠の中央に来るように座標(sx, sy)を計算
-    // イラストの開始位置(startX)からpadding分(2px)引き、
-    // さらにアスペクト比調整で増えた余白分 (bw - paddedW) / 2 を引く
-    let sx = startX - padding - (bw - paddedW) / 2;
-    let sy = startY - padding - (bh - paddedH) / 2;
-
-    // 4. 画像の範囲外に枠がはみ出さないようにガード（画像端ギリギリの場合は余白が狭まる可能性があります）
-    // 枠自体が画像より大きい場合は縮小処理が必要ですが、通常は画像サイズ内に収まるようクランプします
-    if (bw > imgW) { bw = imgW; sx = 0; bh = bw / ratio; }
-    if (bh > imgH) { bh = imgH; sy = 0; bw = bh * ratio; }
-
-    sx = Math.max(0, Math.min(sx, imgW - bw));
-    sy = Math.max(0, Math.min(sy, imgH - bh));
-
-    arr.push({ x: sx, y: sy, w: bw, h: bh, id: ++globalIdCounter });
-}
 
     function getResizedDataUrl(img, b) {
         const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320;
@@ -352,20 +398,63 @@
     };
 
     function updateView() { if(!projects[currentIndex]) return; canvas.width = projects[currentIndex].img.width; canvas.height = projects[currentIndex].img.height; document.getElementById('fileInfo').innerText = `${currentIndex+1} / ${projects.length}`; document.getElementById('prevBtn').disabled = currentIndex === 0; document.getElementById('nextBtn').disabled = currentIndex === projects.length - 1; draw(); }
-    function draw() { if(!projects[currentIndex]) return; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(projects[currentIndex].img, 0, 0); projects[currentIndex].boxes.forEach(b => { const isS = selectedBox && b.id === selectedBox.id; ctx.strokeStyle = isS ? '#ff007b' : '#007bff'; ctx.lineWidth = 4; ctx.strokeRect(b.x, b.y, b.w, b.h); }); }
-
-    canvas.onmousedown = (e) => { 
-        const rect = canvas.getBoundingClientRect(); const px = (e.clientX - rect.left) * (canvas.width/rect.width), py = (e.clientY - rect.top) * (canvas.height/rect.height); 
+    
+    function draw() { 
         if(!projects[currentIndex]) return; 
+        ctx.clearRect(0,0,canvas.width,canvas.height); 
+        ctx.drawImage(projects[currentIndex].img, 0, 0); 
+        projects[currentIndex].boxes.forEach(b => { 
+            const isS = selectedBox && b.id === selectedBox.id; 
+            ctx.strokeStyle = isS ? '#ff007b' : '#007bff'; 
+            ctx.lineWidth = 4; 
+            ctx.strokeRect(b.x, b.y, b.w, b.h); 
+            
+            if(isS) {
+                ctx.fillStyle = '#ff007b';
+                const handleSize = Math.max(24, canvas.width * 0.04); 
+                ctx.fillRect(b.x + b.w - handleSize, b.y + b.h - handleSize, handleSize, handleSize);
+            }
+        }); 
+    }
+
+    function getCanvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const pos = e.touches ? e.touches[0] : e;
+        return {
+            px: (pos.clientX - rect.left) * (canvas.width / rect.width),
+            py: (pos.clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+
+    function onCanvasStart(e) {
+        if(!projects[currentIndex]) return; 
+        const { px, py } = getCanvasPos(e);
         selectedBox = [...projects[currentIndex].boxes].reverse().find(b => px > b.x && px < b.x+b.w && py > b.y && py < b.y+b.h); 
-        if(selectedBox) { saveState(); isDragging = true; dragMode = (px > selectedBox.x+selectedBox.w-20 && py > selectedBox.y+selectedBox.h-20) ? 'resize' : 'move'; offset = {x: px - selectedBox.x, y: py - selectedBox.y, sw: selectedBox.w, sh: selectedBox.h, sx: px}; } draw(); 
-    };
-    window.onmousemove = (e) => { 
-        if(!isDragging) return; const rect = canvas.getBoundingClientRect(); const px = (e.clientX - rect.left) * (canvas.width/rect.width), py = (e.clientY - rect.top) * (canvas.height/rect.height); 
+        if(selectedBox) { 
+            if(e.cancelable) e.preventDefault();
+            saveState(); isDragging = true; 
+            const handleArea = e.touches ? 60 : 40;
+            dragMode = (px > selectedBox.x+selectedBox.w-handleArea && py > selectedBox.y+selectedBox.h-handleArea) ? 'resize' : 'move'; 
+            offset = {x: px - selectedBox.x, y: py - selectedBox.y, sw: selectedBox.w, sh: selectedBox.h, sx: px}; 
+        } draw(); 
+    }
+
+    function onCanvasMove(e) {
+        if(!isDragging) return; 
+        if(e.cancelable) e.preventDefault();
+        const { px, py } = getCanvasPos(e);
         if(dragMode === 'move') { selectedBox.x = px - offset.x; selectedBox.y = py - offset.y; } 
         else { const ratio = editMode === 'emoji' ? 1 : 370/320; const newW = Math.max(20, offset.sw + (px - offset.sx)); selectedBox.w = newW; selectedBox.h = newW / ratio; } draw(); 
-    };
-    window.onmouseup = () => { if(isDragging) sync(); isDragging = false; };
+    }
+
+    function onCanvasEnd() { if(isDragging) sync(); isDragging = false; }
+
+    canvas.addEventListener('mousedown', onCanvasStart);
+    canvas.addEventListener('touchstart', onCanvasStart, { passive: false });
+    window.addEventListener('mousemove', onCanvasMove);
+    window.addEventListener('touchmove', onCanvasMove, { passive: false });
+    window.addEventListener('mouseup', onCanvasEnd);
+    window.addEventListener('touchend', onCanvasEnd);
     
     document.getElementById('addBox').onclick = () => { if(!projects[currentIndex]) return; saveState(); const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320; projects[currentIndex].boxes.push({x:10, y:10, w:tw, h:th, id:++globalIdCounter}); sync(); draw(); };
     document.getElementById('prevBtn').onclick = () => { currentIndex--; updateView(); };
@@ -379,7 +468,8 @@
         const isTab = type === 'tab';
         document.getElementById('subEditorTitle').innerText = isTab ? 'タブ画像調整 (96x74)' : 'メイン画像調整 (240x240)';
         subCanvas.width = isTab ? 96 : 240;
-        subCanvas.height = isTab ? 74 : 240;
+        subCanvas.height = 240;
+        if(isTab) subCanvas.height = 74;
         
         tImg.onload = () => {
             ts = Math.max(subCanvas.width / tImg.width, subCanvas.height / tImg.height);
@@ -398,9 +488,19 @@
     }
 
     subCanvas.onwheel = (e) => { e.preventDefault(); ts *= e.deltaY > 0 ? 0.9 : 1.1; drawSub(); };
-    let subM = false; subCanvas.onmousedown = () => subM = true;
-    window.addEventListener('mousemove', (e) => { if(subM){ tx+=e.movementX; ty+=e.movementY; drawSub(); }});
-    window.addEventListener('mouseup', () => subM = false);
+    
+    let subM = false; let lastSubX = 0, lastSubY = 0;
+    function onSubStart(e) { subM = true; const pos = e.touches ? e.touches[0] : e; lastSubX = pos.clientX; lastSubY = pos.clientY; if(e.cancelable) e.preventDefault(); }
+    function onSubMove(e) { if(!subM) return; if(e.cancelable) e.preventDefault(); const pos = e.touches ? e.touches[0] : e; const dx = pos.clientX - lastSubX, dy = pos.clientY - lastSubY; tx += dx; ty += dy; lastSubX = pos.clientX; lastSubY = pos.clientY; drawSub(); }
+    function onSubEnd() { subM = false; }
+
+    subCanvas.addEventListener('mousedown', onSubStart);
+    subCanvas.addEventListener('touchstart', onSubStart, { passive: false });
+    window.addEventListener('mousemove', onSubMove);
+    window.addEventListener('touchmove', onSubMove, { passive: false });
+    window.addEventListener('mouseup', onSubEnd);
+    window.addEventListener('touchend', onSubEnd);
+
     window.closeSubModal = () => { document.getElementById('subEditorModal').style.display='none'; };
     window.confirmSubImage = () => {
         saveState();
@@ -415,15 +515,8 @@
     function updateStatusDisplay() {
         const mt = document.getElementById('mainThumb'), tt = document.getElementById('tabThumb');
         const mi = document.getElementById('mainStatusItem');
-        
-        if (finalMainBlob) {
-            mt.src = URL.createObjectURL(finalMainBlob); mt.style.display = 'block';
-        } else { mt.style.display = 'none'; }
-        
-        if (finalTabBlob) {
-            tt.src = URL.createObjectURL(finalTabBlob); tt.style.display = 'block';
-        } else { tt.style.display = 'none'; }
-        
+        if (finalMainBlob) { mt.src = URL.createObjectURL(finalMainBlob); mt.style.display = 'block'; } else { mt.style.display = 'none'; }
+        if (finalTabBlob) { tt.src = URL.createObjectURL(finalTabBlob); tt.style.display = 'block'; } else { tt.style.display = 'none'; }
         mi.style.display = editMode === 'stamp' ? 'flex' : 'none';
     }
 
