@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>LINE クリエイターズエディタ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/gauge.js/1.3.7/gauge.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f0f0; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .header { background: #fff; padding: 10px 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 15px; }
+        .main-container { display: flex; flex: 1; gap: 15px; overflow: hidden; min-height: 0; }
+        .editor-area { flex: 3; position: relative; background: #ccc; border: 2px solid #bbb; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; }
+        .checkerboard { background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%); background-size: 15px 15px; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; }
+        .side-panel { flex: 1; min-width: 250px; max-width: 300px; background: #fff; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
+        
+        .preview-section { background: #fff; margin-top: 10px; padding: 10px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); flex-shrink: 0; overflow: hidden; }
+        .preview-list { display: flex; flex-wrap: nowrap; overflow-x: auto !important; gap: 15px; padding: 15px 10px; background: #fafafa; border-radius: 8px; min-height: 160px; }
+        
+        .preview-item { position: relative; flex: 0 0 100px !important; width: 100px; height: 150px; background: #fff; border: 1px solid #ddd; cursor: grab; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px; box-sizing: border-box; border-radius: 6px; }
+        .preview-item-img-box { width: 80px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 2px; }
+        .preview-item-img-box img { max-width: 100%; max-height: 100%; }
+        
+        .badge { position: absolute; top: -5px; left: -5px; background: #666; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; font-weight: bold; z-index: 10; }
+        .del-btn { position: absolute; top: 0; right: 0; background: #ff4d4d; color: white; border: none; font-size: 10px; cursor: pointer; border-radius: 0 6px 0 6px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        
+        .btn-group { display: flex; gap: 2px; width: 100%; }
+        .tab-btn { font-size: 9px; padding: 2px 0; cursor: pointer; background: #f8f8f8; border: 1px solid #ccc; flex: 1; border-radius: 4px; }
+        .active-gold { background: #ffc107 !important; border-color: #e0a800 !important; font-weight: bold; }
+        .active-blue { background: #007bff !important; border-color: #0056b3 !important; color: #fff !important; font-weight: bold; }
+
+        /* ステータス周りのスタイル */
+        .status-box { display: flex; gap: 10px; align-items: center; background: #f9f9f9; padding: 5px 12px; border-radius: 10px; border: 1px solid #ddd; }
+        .status-item { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
+        .status-thumb { width: 40px; height: 40px; border: 1px solid #ccc; border-radius: 4px; object-fit: contain; background-color: #fff; cursor: pointer; display: none; }
+        .status-label { font-size: 9px; font-weight: bold; color: #555; }
+        .mini-upload-btn { font-size: 8px; padding: 2px 4px; background: #007bff; color: #fff; border-radius: 3px; cursor: pointer; margin-top: 2px; }
+
+        #subEditorModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; }
+        .modal-inner { background: #fff; padding: 20px; border-radius: 12px; text-align: center; max-width: 90%; }
+        
+        button { background: #00c300; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #ccc !important; cursor: not-allowed; }
+        .secondary { background: #666; }
+        .blue { background: #007bff; }
+        .orange { background: #fd7e14; }
+        .red { background: #dc3545; }
+        .dark { background: #343a40; }
+
+        .mode-selector { background: #eee; padding: 5px; border-radius: 8px; display: flex; gap: 5px; }
+        .mode-selector label { font-size: 12px; padding: 5px 10px; cursor: pointer; border-radius: 5px; }
+        .mode-selector input { display: none; }
+        .mode-selector input:checked + span { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: bold; }
+        .mode-selector span { display: block; padding: 4px 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex; align-items:center; gap:12px;">
+        <h3 style="margin:0; white-space:nowrap;">LINE エディタ</h3>
+        <div class="mode-selector">
+            <label><input type="radio" name="mode" value="emoji" checked><span>絵文字</span></label>
+            <label><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
+        </div>
+        <input type="file" id="upload" accept="image/*" multiple>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center;">
+        <button id="undoBtn" class="dark" disabled>↩️</button>
+        <button id="resetOrder" class="red">📍 確定</button>
+        
+        <!-- メイン・タブ画像プレビューエリア -->
+        <div class="status-box">
+            <div id="mainStatusItem" class="status-item">
+                <span class="status-label">メイン</span>
+                <img id="mainThumb" class="status-thumb checkerboard">
+                <label class="mini-upload-btn">別UP<input type="file" id="mainSpecificUpload" hidden accept="image/*"></label>
+            </div>
+            <div class="status-item">
+                <span class="status-label">タブ</span>
+                <img id="tabThumb" class="status-thumb checkerboard">
+                <label class="mini-upload-btn">別UP<input type="file" id="tabSpecificUpload" hidden accept="image/*"></label>
+            </div>
+        </div>
+
+        <button id="openSorter" class="orange">🔃 全表示</button>
+        <button id="downloadZip" class="blue">ZIP保存</button>
+
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="editor-area"><canvas id="mainCanvas" class="checkerboard"></canvas></div>
+    <div class="side-panel">
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button id="prevBtn" class="secondary" disabled>前</button>
+            <span id="fileInfo" style="font-size:12px; flex:1; text-align:center; padding-top:8px;">画像を選択</span>
+            <button id="nextBtn" class="secondary" disabled>次</button>
+        </div>
+        <button id="addBox">＋ 枠を追加</button>
+    </div>
+</div>
+
+<div class="preview-section">
+    <div id="globalPreview" class="preview-list"></div>
+</div>
+
+<!-- モーダル等は前回と同様 -->
+<div id="sorterOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:#fff;">
+        <h2 style="margin:0;">並べ替え</h2>
+        <button onclick="closeSorter()" style="background:#fff; color:#000;">完了</button>
+    </div>
+    <div id="fullSorterList" class="sorter-container" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; justify-items:center;"></div>
+</div>
+
+<div id="subEditorModal">
+    <div class="modal-inner">
+        <h4 id="subEditorTitle">画像調整</h4>
+        <div class="checkerboard" style="display:inline-block; border:1px solid #999; overflow: hidden;">
+            <canvas id="subCanvas" style="cursor:move; vertical-align: bottom;"></canvas>
+        </div>
+        <p style="font-size: 11px; color: #666; margin: 10px 0;">ホイール：拡大縮小 / ドラッグ：移動</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="closeSubModal()" class="secondary">キャンセル</button>
+            <button onclick="confirmSubImage()" class="blue">確定</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="renderCanvas" style="display:none;"></canvas>
+
+<script>
+    const canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d');
+    const upload = document.getElementById('upload'), globalPreviewContainer = document.getElementById('globalPreview');
+    const fullSorterList = document.getElementById('fullSorterList'), subCanvas = document.getElementById('subCanvas'), sctx = subCanvas.getContext('2d');
+    const renderCanvas = document.getElementById('renderCanvas'), rctx = renderCanvas.getContext('2d');
+    
+    let projects = [], currentIndex = 0, selectedBox = null, isDragging = false, dragMode = 'move', offset = { x: 0, y: 0 }, globalIdCounter = 0, globalOrder = [], editMode = 'emoji';
+
+    let finalTabBlob = null, lastTabDataUrl = null;
+    let finalMainBlob = null, lastMainDataUrl = null;
+    let subEditingTarget = 'tab'; 
+
+    // 横スクロール
+    globalPreviewContainer.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) { e.preventDefault(); globalPreviewContainer.scrollLeft += e.deltaY; }
+    }, { passive: false });
+
+    // モード切替
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (projects.length > 0 && !confirm("モードを切り替えると枠の設定がリセットされます。")) {
+                document.querySelector(`input[value="${editMode}"]`).checked = true; return;
+            }
+            editMode = e.target.value;
+            resetSpecials();
+            projects.forEach(p => { p.boxes = detectReliableRegions(p.img); });
+            sync(); updateView();
+        });
+    });
+
+    function resetSpecials() {
+        finalTabBlob = null; lastTabDataUrl = null;
+        finalMainBlob = null; lastMainDataUrl = null;
+        updateStatusDisplay();
+    }
+
+    // 別アップロード処理
+    document.getElementById('mainSpecificUpload').onchange = (e) => handleSpecificFile(e, 'main');
+    document.getElementById('tabSpecificUpload').onchange = (e) => handleSpecificFile(e, 'tab');
+
+    async function handleSpecificFile(e, type) {
+        if (!e.target.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (type === 'main') lastMainDataUrl = ev.target.result;
+            else lastTabDataUrl = ev.target.result;
+            openSubEditor('external', ev.target.result, type);
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+
+    // サムネイルクリックで再編集
+    document.getElementById('mainThumb').onclick = () => { if(lastMainDataUrl) openSubEditor('external', lastMainDataUrl, 'main'); };
+    document.getElementById('tabThumb').onclick = () => { if(lastTabDataUrl) openSubEditor('external', lastTabDataUrl, 'tab'); };
+
+    // 履歴・基本機能
+    let history = [];
+    function saveState() {
+        history.push({
+            projects: JSON.parse(JSON.stringify(projects.map(p => ({...p, img:null})))),
+            globalOrder: JSON.parse(JSON.stringify(globalOrder)),
+            finalTabBlob, finalMainBlob, lastTabDataUrl, lastMainDataUrl
+        });
+        if (history.length > 20) history.shift();
+        document.getElementById('undoBtn').disabled = false;
+    }
+
+    document.getElementById('undoBtn').onclick = () => {
+        if (history.length === 0) return;
+        const state = history.pop();
+        state.projects.forEach((p, i) => { p.img = projects[i].img; });
+        projects = state.projects; globalOrder = state.globalOrder;
+        finalTabBlob = state.finalTabBlob; finalMainBlob = state.finalMainBlob;
+        lastTabDataUrl = state.lastTabDataUrl; lastMainDataUrl = state.lastMainDataUrl;
+        if (history.length === 0) document.getElementById('undoBtn').disabled = true;
+        updateView(); refreshPreview(); updateStatusDisplay();
+    };
+
+    const sortConfig = {
+        animation: 150,
+        onEnd: function() {
+            const list = this.el.id === 'fullSorterList' ? fullSorterList : globalPreviewContainer;
+            const ids = Array.from(list.children).map(el => el.dataset.orderId);
+            const map = new Map(globalOrder.map(i => [i.orderId, i]));
+            globalOrder = ids.map(id => map.get(id));
+            refreshPreview();
+        }
+    };
+    new Sortable(globalPreviewContainer, sortConfig);
+    new Sortable(fullSorterList, sortConfig);
+
+    upload.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        projects = []; globalOrder = []; history = [];
+        resetSpecials();
+        for (let i = 0; i < files.length; i++) {
+            const img = await new Promise(res => {
+                const r = new FileReader(); r.onload = (ev) => { const i = new Image(); i.onload = () => res(i); i.src = ev.target.result; }; r.readAsDataURL(files[i]);
+            });
+            const pId = Date.now() + i; 
+            const boxes = detectReliableRegions(img);
+            projects.push({ id: pId, img, name: files[i].name, boxes });
+            boxes.forEach(b => {
+                globalOrder.push({ orderId: `order_${b.id}`, projId: pId, boxId: b.id, sourceIndex: globalOrder.length + 1, dataUrl: getResizedDataUrl(img, b) });
+            });
+        }
+        currentIndex = 0; updateView(); refreshPreview();
+    });
+
+    function detectReliableRegions(image) {
+        const ac = document.createElement('canvas'), actx = ac.getContext('2d');
+        ac.width = image.width; ac.height = image.height; actx.drawImage(image, 0, 0);
+        const imgData = actx.getImageData(0,0,ac.width,ac.height), d = imgData.data, w = ac.width, h = ac.height;
+        const isC = (x, y) => d[((y * w + x) * 4) + 3] >= 20;
+        let rows = []; for (let y = 0; y < h; y++) { let f = false; for (let x = 0; x < w; x++) { if (isC(x, y)) { f = true; break; } } rows.push(f); }
+        let regionsY = [], sY = -1; for (let y = 0; y < h; y++) { if (rows[y] && sY === -1) sY = y; else if (!rows[y] && sY !== -1) { regionsY.push({y: sY, h: y - sY}); sY = -1; } }
+        if (sY !== -1) regionsY.push({y: sY, h: h - sY});
+        let boxes = []; const ratio = editMode === 'emoji' ? 1 : 370/320;
+        regionsY.forEach(rY => {
+            let cols = []; for (let x = 0; x < w; x++) { let f = false; for (let y = rY.y; y < rY.y + rY.h; y++) { if (isC(x, y)) { f = true; break; } } cols.push(f); }
+            let sX = -1; for (let x = 0; x < w; x++) { if (cols[x] && sX === -1) sX = x; else if (!cols[x] && sX !== -1) { addRegionBox(sX, rY.y, x - sX, rY.h, boxes, w, h, ratio); sX = -1; } }
+            if (sX !== -1) addRegionBox(sX, rY.y, w - sX, rY.h, boxes, w, h, ratio);
+        });
+        return boxes;
+    }
+
+   function addRegionBox(startX, startY, ow, oh, arr, imgW, imgH, ratio) {
+    const padding = 2; // 2pxの余白
+
+    // 1. イラストのサイズに余白（左右/上下で計4px）を加えた「必要最小限の枠サイズ」を計算
+    let paddedW = ow + (padding * 2);
+    let paddedH = oh + (padding * 2);
+
+    // 2. アスペクト比に合わせて、枠の幅(bw)と高さ(bh)を決定
+    let bw, bh;
+    if (paddedW / paddedH > ratio) {
+        // 横が長い場合、幅を基準に高さを決める
+        bw = paddedW;
+        bh = paddedW / ratio;
+    } else {
+        // 縦が長い場合、高さを基準に幅を決める
+        bh = paddedH;
+        bw = paddedH * ratio;
+    }
+
+    // 3. イラストが枠の中央に来るように座標(sx, sy)を計算
+    // イラストの開始位置(startX)からpadding分(2px)引き、
+    // さらにアスペクト比調整で増えた余白分 (bw - paddedW) / 2 を引く
+    let sx = startX - padding - (bw - paddedW) / 2;
+    let sy = startY - padding - (bh - paddedH) / 2;
+
+    // 4. 画像の範囲外に枠がはみ出さないようにガード（画像端ギリギリの場合は余白が狭まる可能性があります）
+    // 枠自体が画像より大きい場合は縮小処理が必要ですが、通常は画像サイズ内に収まるようクランプします
+    if (bw > imgW) { bw = imgW; sx = 0; bh = bw / ratio; }
+    if (bh > imgH) { bh = imgH; sy = 0; bw = bh * ratio; }
+
+    sx = Math.max(0, Math.min(sx, imgW - bw));
+    sy = Math.max(0, Math.min(sy, imgH - bh));
+
+    arr.push({ x: sx, y: sy, w: bw, h: bh, id: ++globalIdCounter });
+}
+
+    function getResizedDataUrl(img, b) {
+        const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320;
+        renderCanvas.width = tw; renderCanvas.height = th;
+        rctx.clearRect(0,0,tw,th);
+        const s = Math.min(tw/b.w, th/b.h);
+        rctx.imageSmoothingQuality = 'high';
+        rctx.drawImage(img, b.x, b.y, b.w, b.h, (tw-b.w*s)/2, (th-b.h*s)/2, b.w*s, b.h*s);
+        return renderCanvas.toDataURL('image/png');
+    }
+
+    function sync() {
+        if(!projects[currentIndex]) return;
+        const p = projects[currentIndex], updated = p.boxes.map(b => ({ orderId:`order_${b.id}`, projId:p.id, boxId:b.id, dataUrl:getResizedDataUrl(p.img, b) }));
+        const uMap = new Map(updated.map(i => [i.orderId, i]));
+        globalOrder = globalOrder.map(i => {
+            if (i.projId === p.id) {
+                const newData = uMap.get(i.orderId); return newData ? { ...i, ...newData } : null; 
+            } return i;
+        }).filter(i => i !== null);
+        updated.forEach(i => { 
+            if(!globalOrder.some(g => g.orderId === i.orderId)) {
+                i.sourceIndex = globalOrder.length > 0 ? Math.max(...globalOrder.map(o => o.sourceIndex)) + 1 : 1;
+                globalOrder.push(i); 
+            }
+        });
+        refreshPreview();
+    }
+
+    function refreshPreview() {
+        [globalPreviewContainer, fullSorterList].forEach(container => {
+            container.innerHTML = '';
+            globalOrder.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.dataset.orderId = item.orderId;
+                div.innerHTML = `
+                    <span class="badge">${String(item.sourceIndex).padStart(3,'0')}</span>
+                    <button class="del-btn" onclick="removeBox('${item.orderId}')">×</button>
+                    <div class="preview-item-img-box checkerboard"><img src="${item.dataUrl}"></div>
+                    <div style="font-size:10px; color:#007bff; font-weight:bold;">→ ${String(i+1).padStart(editMode==='stamp'?2:3,'0')}</div>
+                    <div class="btn-group">
+                        ${editMode === 'stamp' ? `<button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'main')">メイン</button>` : ''}
+                        <button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'tab')">タブ</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        });
+    }
+
+    window.removeBox = (oid) => { 
+        saveState(); 
+        globalOrder = globalOrder.filter(i => i.orderId !== oid); 
+        projects.forEach(p => p.boxes = p.boxes.filter(b => `order_${b.id}` !== oid)); 
+        refreshPreview(); draw(); 
+    };
+
+    function updateView() { if(!projects[currentIndex]) return; canvas.width = projects[currentIndex].img.width; canvas.height = projects[currentIndex].img.height; document.getElementById('fileInfo').innerText = `${currentIndex+1} / ${projects.length}`; document.getElementById('prevBtn').disabled = currentIndex === 0; document.getElementById('nextBtn').disabled = currentIndex === projects.length - 1; draw(); }
+    function draw() { if(!projects[currentIndex]) return; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(projects[currentIndex].img, 0, 0); projects[currentIndex].boxes.forEach(b => { const isS = selectedBox && b.id === selectedBox.id; ctx.strokeStyle = isS ? '#ff007b' : '#007bff'; ctx.lineWidth = 4; ctx.strokeRect(b.x, b.y, b.w, b.h); }); }
+
+    canvas.onmousedown = (e) => { 
+        const rect = canvas.getBoundingClientRect(); const px = (e.clientX - rect.left) * (canvas.width/rect.width), py = (e.clientY - rect.top) * (canvas.height/rect.height); 
+        if(!projects[currentIndex]) return; 
+        selectedBox = [...projects[currentIndex].boxes].reverse().find(b => px > b.x && px < b.x+b.w && py > b.y && py < b.y+b.h); 
+        if(selectedBox) { saveState(); isDragging = true; dragMode = (px > selectedBox.x+selectedBox.w-20 && py > selectedBox.y+selectedBox.h-20) ? 'resize' : 'move'; offset = {x: px - selectedBox.x, y: py - selectedBox.y, sw: selectedBox.w, sh: selectedBox.h, sx: px}; } draw(); 
+    };
+    window.onmousemove = (e) => { 
+        if(!isDragging) return; const rect = canvas.getBoundingClientRect(); const px = (e.clientX - rect.left) * (canvas.width/rect.width), py = (e.clientY - rect.top) * (canvas.height/rect.height); 
+        if(dragMode === 'move') { selectedBox.x = px - offset.x; selectedBox.y = py - offset.y; } 
+        else { const ratio = editMode === 'emoji' ? 1 : 370/320; const newW = Math.max(20, offset.sw + (px - offset.sx)); selectedBox.w = newW; selectedBox.h = newW / ratio; } draw(); 
+    };
+    window.onmouseup = () => { if(isDragging) sync(); isDragging = false; };
+    
+    document.getElementById('addBox').onclick = () => { if(!projects[currentIndex]) return; saveState(); const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320; projects[currentIndex].boxes.push({x:10, y:10, w:tw, h:th, id:++globalIdCounter}); sync(); draw(); };
+    document.getElementById('prevBtn').onclick = () => { currentIndex--; updateView(); };
+    document.getElementById('nextBtn').onclick = () => { currentIndex++; updateView(); };
+    document.getElementById('openSorter').onclick = () => { document.getElementById('sorterOverlay').style.display = 'flex'; refreshPreview(); };
+    window.closeSorter = () => { document.getElementById('sorterOverlay').style.display = 'none'; };
+
+    let tImg = new Image(), tx=0, ty=0, ts=1;
+    function openSubEditor(orderId, dataUrl, type) {
+        subEditingTarget = type;
+        const isTab = type === 'tab';
+        document.getElementById('subEditorTitle').innerText = isTab ? 'タブ画像調整 (96x74)' : 'メイン画像調整 (240x240)';
+        subCanvas.width = isTab ? 96 : 240;
+        subCanvas.height = isTab ? 74 : 240;
+        
+        tImg.onload = () => {
+            ts = Math.max(subCanvas.width / tImg.width, subCanvas.height / tImg.height);
+            tx = (subCanvas.width - tImg.width * ts) / 2;
+            ty = (subCanvas.height - tImg.height * ts) / 2;
+            drawSub();
+            document.getElementById('subEditorModal').style.display = 'flex';
+        };
+        tImg.src = dataUrl;
+        if(type === 'main') lastMainDataUrl = dataUrl; else lastTabDataUrl = dataUrl;
+    }
+
+    function drawSub() {
+        sctx.clearRect(0,0,subCanvas.width,subCanvas.height);
+        sctx.save(); sctx.translate(tx, ty); sctx.scale(ts, ts); sctx.drawImage(tImg, 0, 0); sctx.restore();
+    }
+
+    subCanvas.onwheel = (e) => { e.preventDefault(); ts *= e.deltaY > 0 ? 0.9 : 1.1; drawSub(); };
+    let subM = false; subCanvas.onmousedown = () => subM = true;
+    window.addEventListener('mousemove', (e) => { if(subM){ tx+=e.movementX; ty+=e.movementY; drawSub(); }});
+    window.addEventListener('mouseup', () => subM = false);
+    window.closeSubModal = () => { document.getElementById('subEditorModal').style.display='none'; };
+    window.confirmSubImage = () => {
+        saveState();
+        subCanvas.toBlob(blob => {
+            if (subEditingTarget === 'tab') finalTabBlob = blob;
+            else finalMainBlob = blob;
+            updateStatusDisplay();
+        }, 'image/png');
+        closeSubModal();
+    };
+
+    function updateStatusDisplay() {
+        const mt = document.getElementById('mainThumb'), tt = document.getElementById('tabThumb');
+        const mi = document.getElementById('mainStatusItem');
+        
+        if (finalMainBlob) {
+            mt.src = URL.createObjectURL(finalMainBlob); mt.style.display = 'block';
+        } else { mt.style.display = 'none'; }
+        
+        if (finalTabBlob) {
+            tt.src = URL.createObjectURL(finalTabBlob); tt.style.display = 'block';
+        } else { tt.style.display = 'none'; }
+        
+        mi.style.display = editMode === 'stamp' ? 'flex' : 'none';
+    }
+
+    document.getElementById('downloadZip').onclick = async () => {
+        const zip = new JSZip();
+        const padLength = editMode === 'stamp' ? 2 : 3;
+        globalOrder.forEach((item, i) => {
+            zip.file(`${String(i + 1).padStart(padLength, '0')}.png`, item.dataUrl.split(',')[1], {base64: true});
+        });
+        if (finalTabBlob) zip.file("tab.png", finalTabBlob);
+        if (editMode === 'stamp' && finalMainBlob) zip.file("main.png", finalMainBlob);
+        const blob = await zip.generateAsync({type: "blob"});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `line_${editMode}_pack.zip`; a.click();
+    };
+
+    document.getElementById('resetOrder').onclick = () => { if (globalOrder.length === 0) return; if (!confirm("現在の並び順で番号を振り直しますか？")) return; saveState(); globalOrder.forEach((item, index) => { item.sourceIndex = index + 1; }); refreshPreview(); };
+</script>
+</body>
+</html>
