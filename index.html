@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <link rel="icon" href="favicon.png" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINE クリエイターズエディタ</title>
@@ -18,11 +17,112 @@
         .side-panel { flex: 1; min-width: 250px; max-width: 300px; background: #fff; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
         
         .preview-section { background: #fff; margin-top: 10px; padding: 10px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); flex-shrink: 0; overflow: hidden; }
-        .preview-list { display: flex; flex-wrap: nowrap; overflow-x: auto !important; gap: 15px; padding: 15px 10px; background: #fafafa; border-radius: 8px; min-height: 160px; }
-        
-        /* 通常のプレビューアイテム設定 */
-        .preview-item { position: relative; flex: 0 0 100px !important; width: 100px; height: 150px; background: #fff; border: 1px solid #ddd; cursor: grab; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px; box-sizing: border-box; border-radius: 6px; }
-        .preview-item-img-box { width: 80px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 2px; }
+        .preview-list { display: flex; flex-wrap: nowrap; overflow-x: auto !important; gap: 15px; padding: 5px 10px 15px 10px; background: #fafafa; border-radius: 8px; min-height: 160px; }
+/* 💡 背景切り替えボタンのレイアウト */
+.bg-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0px;
+    padding: 0 5px;
+}
+.bg-selector-buttons {
+    display: flex;
+    gap: 5px;
+}
+.bg-btn {
+    border: 1px solid #ccc;
+    background: #fff;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.bg-btn.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+    font-weight: bold;
+}
+
+/* 💡 各背景モードの定義（画像ボックスに適用） */
+/* 格子柄（透過チェック用） */
+.preview-item-img-box.bg-mode-checkerboard {
+    background-color: #fff;
+    background-image: linear-gradient(45deg, #efefef 25%, transparent 25%, transparent 75%, #efefef 75%, #efefef),
+                      linear-gradient(45deg, #efefef 25%, transparent 25%, transparent 75%, #efefef 75%, #efefef);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+}
+/* 白背景 */
+.preview-item-img-box.bg-mode-white {
+    background: #ffffff !important;
+}
+/* 黒背景 */
+.preview-item-img-box.bg-mode-black {
+    background: #111111 !important;
+}
+/* 水色背景（LINEのトーク画面風） */
+.preview-item-img-box.bg-mode-lightblue {
+    background: #7493c0 !important; /* LINEのデフォルト背景に近い落ち着いた青 */
+}
+
+/* 通常のプレビューアイテム設定 */
+.preview-item { 
+    position: relative; 
+    flex: 0 0 100px !important; 
+    width: 100px; 
+    height: 150px; 
+    background: #fff; 
+    border: 1px solid #ddd; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 5px; 
+    box-sizing: border-box; 
+    border-radius: 6px; 
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 💻 PC用の設定：ハンドルをアイテム全体に広げて透明化（どこでも掴めるようにする） */
+.drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* バッジや削除ボタンよりは下に配置 */
+    cursor: grab;
+    text-align: center;
+    color: transparent; /* 三本線テキスト（☰）を透明にして隠す */
+    background: transparent;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* 📱 スマホ・タブレット（タッチ操作環境）のときだけ上書きする設定 */
+@media (hover: none) and (pointer: coarse) {
+    /* ハンドルを透明から「いつもの三本線バー」のデザインに戻す */
+    .drag-handle {
+        position: relative;
+        width: 100%;
+        height: 20px;
+        z-index: auto;
+        background: #eee;
+        color: #666; /* 三本線を見せる */
+        font-size: 12px;
+        border-radius: 4px;
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}        .preview-item-img-box { width: 80px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 2px; }
         .preview-item-img-box img { max-width: 100%; max-height: 100%; }
         
         .badge { position: absolute; top: -5px; left: -5px; background: #666; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; font-weight: bold; z-index: 10; }
@@ -61,6 +161,7 @@
             gap: 6px !important;
             padding: 10px !important;
         }
+       /* 全表示モーダル専用：高さを最適化 */
         #fullSorterList .preview-item {
             flex: none !important;
             width: 92px !important;
@@ -69,6 +170,11 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             justify-content: flex-start !important; 
             gap: 1px !important; 
+            
+            /* ★全表示側にも追加しておくと、一覧画面での長押しも防げます！ */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         #fullSorterList .preview-item-img-box {
             width: 82px !important; 
@@ -106,7 +212,26 @@
             .preview-section { position: sticky; bottom: 0; background: #fff; z-index: 1000; margin-top: 10px; padding: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.15); }
             .preview-list { min-height: 130px; padding: 10px 5px; gap: 10px; }
             .preview-item { flex: 0 0 85px !important; width: 85px; height: 135px; padding: 3px; }
-            
+/* アイテム自体は掴めないようにし、テキスト選択も防ぐ */
+.preview-item { cursor: default; }
+
+/* 💡 掴み手（ハンドル）のデザイン */
+.drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 20px;
+    background: #eee;
+    color: #666;
+    font-size: 12px;
+    cursor: grab;
+    border-radius: 4px;
+    margin-bottom: 2px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}            
             .preview-item .del-btn { width: 26px; height: 26px; font-size: 14px; border-radius: 0 6px 0 10px; }
             .preview-item-img-box { width: 70px; height: 50px; }
             .tab-btn { font-size: 8px; padding: 2px 0; }
@@ -117,6 +242,82 @@
             #fullSorterList .preview-item-img-box { width: 74px !important; height: 54px !important; }
 
             button { padding: 10px 14px; font-size: 14px; }
+        }
+
+        /* ヘルプボタン & ヘルプモーダル */
+        .help-btn {
+            background: #6f42c1;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        #helpOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+        }
+        #helpOverlay .help-inner {
+            background: #fff;
+            width: 640px;
+            max-width: 92%;
+            max-height: 85vh;
+            border-radius: 14px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .help-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 22px;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        .help-header h2 { margin: 0; font-size: 18px; color: #222; }
+        .help-header button { background: #eee; color: #333; width: 30px; height: 30px; border-radius: 50%; padding: 0; }
+        .help-body { padding: 10px 22px 22px; overflow-y: auto; }
+        .help-section { margin-bottom: 18px; }
+        .help-section h3 {
+            font-size: 14px;
+            color: #00c300;
+            border-left: 4px solid #00c300;
+            padding-left: 8px;
+            margin: 0 0 8px;
+        }
+        .help-section p, .help-section li { font-size: 13px; line-height: 1.7; color: #444; margin: 4px 0; }
+        .help-section ul { margin: 4px 0; padding-left: 20px; }
+        .help-section .kbd {
+            display: inline-block;
+            background: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        .help-note {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-top: 6px;
+        }
+        @media (max-width: 768px) {
+            #helpOverlay .help-inner { width: 100%; max-height: 100%; height: 100%; border-radius: 0; }
         }
     </style>
 </head>
@@ -130,6 +331,7 @@
             <label><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
         </div>
         <input type="file" id="upload" accept="image/*" multiple>
+        <button id="openHelp" class="help-btn" title="使い方ヘルプ">？</button>
     </div>
 
     <div style="display:flex; gap:12px; align-items:center;">
@@ -148,7 +350,7 @@
                 <label class="mini-upload-btn">別UP<input type="file" id="tabSpecificUpload" hidden accept="image/*"></label>
             </div>
         </div>
-
+        <button id="openStorePreview" style="background: #28a745; color: white; font-weight: bold;">ストア確認</button>
         <button id="openSorter" class="orange">🔃 全表示</button>
         <button id="downloadZip" class="blue">ZIP保存</button>
     </div>
@@ -163,13 +365,26 @@
             <button id="nextBtn" class="secondary" disabled>次</button>
         </div>
         <button id="addBox">＋ 枠を追加</button>
+<input type="file" id="updateSheetInput" style="display:none;" accept="image/*">
+<button id="updateSheetBtn" style="background:#ffc107; color:#000; font-weight:bold; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; margin-left:5px;">画像を差し替え</button>
     </div>
 </div>
 
 <div class="preview-section">
-    <div id="globalPreview" class="preview-list"></div>
-</div>
 
+    <div class="bg-selector-container">
+        <span style="font-size: 12px; font-weight: bold; color: #555;">背景確認:</span>
+        <div class="bg-selector-buttons">
+            <button class="bg-btn active" onclick="changePreviewBg('checkerboard')">格子</button>
+            <button class="bg-btn" onclick="changePreviewBg('white')">白</button>
+            <button class="bg-btn" onclick="changePreviewBg('black')">黒</button>
+            <button class="bg-btn" onclick="changePreviewBg('lightblue')">水色</button>
+        </div>
+    </div>
+
+    <div class="preview-list" id="globalPreview"></div>
+
+</div>
 <!-- 全表示モーダル -->
 <div id="sorterOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:#fff;">
@@ -194,6 +409,84 @@
         </div>
     </div>
 </div>
+<div id="storePreviewOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; padding:20px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:#fff; flex-wrap: wrap; gap: 10px;">
+        <h2 style="margin:0; font-size: 18px;">🛒 ストア外観確認</h2>
+        
+        <div class="bg-selector-container" style="background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: bold; color: #fff;">背景確認:</span>
+            <div class="bg-selector-buttons" style="display: inline-flex; gap: 4px;">
+                <button class="bg-btn" onclick="changePreviewBg('checkerboard')">格子</button>
+                <button class="bg-btn" onclick="changePreviewBg('white')">白</button>
+                <button class="bg-btn" onclick="changePreviewBg('black')">黒</button>
+                <button class="bg-btn" onclick="changePreviewBg('lightblue')">水色</button>
+            </div>
+        </div>
+        
+        <button onclick="closeStorePreview()" style="background:#fff; color:#000; border: none; padding: 6px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">完了</button>
+    </div>
+    
+    <div id="storePreviewList" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid; grid-template-columns: repeat(4, 1fr); gap: 16px; justify-items: center; align-content: start;"></div>
+</div>
+
+<!-- ヘルプモーダル -->
+<div id="helpOverlay">
+    <div class="help-inner">
+        <div class="help-header">
+            <h2>📖 使い方ヘルプ</h2>
+            <button onclick="closeHelp()">✕</button>
+        </div>
+        <div class="help-body">
+            <div class="help-section">
+                <h3>1. モードを選ぶ</h3>
+                <p>「絵文字」（正方形の枠）と「スタンプ」（横長の枠）を切り替えられます。画像をアップロード済みの状態でモードを変えると、枠の設定がリセットされるので注意してください。</p>
+            </div>
+            <div class="help-section">
+                <h3>2. 画像をアップロード</h3>
+                <p>ヘッダーのファイル選択から、素材となるシート画像（複数枚可）を選びます。イラスト部分（透明でない領域）が自動でスキャンされ、枠が自動生成されます。</p>
+            </div>
+            <div class="help-section">
+                <h3>3. 枠を編集する</h3>
+                <ul>
+                    <li>枠をクリック（タップ）して選択</li>
+                    <li>枠の内側をドラッグで移動</li>
+                    <li>右下の角（ピンク色のハンドル）をドラッグでリサイズ</li>
+                    <li>「＋ 枠を追加」で手動で枠を追加できます</li>
+                    <li>「前」「次」ボタンで複数枚の画像を切り替えられます</li>
+                </ul>
+            </div>
+            <div class="help-section">
+                <h3>4. 一覧・並べ替え</h3>
+                <p>下部のプレビュー欄や「🔃 全表示」で切り出された画像が一覧表示されます。左端の <span class="kbd">☰</span> ハンドルをドラッグして順番を並べ替えできます。並び替え後は「📍 確定」を押すと番号が振り直されます。</p>
+                <p>各画像の「×」ボタンで削除、「タブ」「メイン」ボタンで画像調整モーダルを開けます。</p>
+            </div>
+            <div class="help-section">
+                <h3>5. タブ・メイン画像の調整</h3>
+                <p>画像調整モーダルでは、指定サイズの枠に対して画像の拡大・縮小・位置調整ができます。</p>
+                <ul>
+                    <li>PC：マウスホイールで拡大縮小、ドラッグで移動</li>
+                    <li>スマホ：2本指ピンチで拡大縮小、1本指ドラッグで移動</li>
+                    <li>「枠に合わせる」で初期位置にリセット</li>
+                </ul>
+                <p>ヘッダー右側の「メイン」「タブ」サムネイルは「別UP」から任意の画像を直接アップロードして調整することもできます。</p>
+            </div>
+            <div class="help-section">
+                <h3>6. 背景確認・ストア確認</h3>
+                <p>「背景確認」ボタンで、プレビュー画像の背景を格子（透過）・白・黒・水色（LINEのトーク画面風）に切り替えて見え方を確認できます。</p>
+                <p>「ストア確認」ボタンでは、番号やボタンなどのUIを除いた画像だけをストア掲載時に近いレイアウトで一覧確認できます。</p>
+            </div>
+            <div class="help-section">
+                <h3>7. 画像を差し替える</h3>
+                <p>「画像を差し替え」ボタンで、現在表示中の元画像だけを新しいバージョンに入れ替えられます。枠の位置や並び順はそのまま維持され、切り出し画像だけが自動で更新されます。</p>
+            </div>
+            <div class="help-section">
+                <h3>8. 元に戻す・保存</h3>
+                <p><span class="kbd">↩️</span> ボタンで直前の操作を取り消せます（最大20件）。作業が終わったら「ZIP保存」で、連番の画像とタブ・メイン画像をまとめてZIPファイルとしてダウンロードできます。</p>
+                <div class="help-note">💡 スタンプは3桁（001.pngなど）、絵文字は2桁（01.pngなど）の連番でファイル名が付きます。</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <canvas id="renderCanvas" style="display:none;"></canvas>
 
@@ -202,6 +495,42 @@
     const upload = document.getElementById('upload'), globalPreviewContainer = document.getElementById('globalPreview');
     const fullSorterList = document.getElementById('fullSorterList'), subCanvas = document.getElementById('subCanvas'), sctx = subCanvas.getContext('2d');
     const renderCanvas = document.getElementById('renderCanvas'), rctx = renderCanvas.getContext('2d');
+// 💡 現在の背景モードを記憶する変数（初期値は格子柄）
+    let currentBgMode = 'checkerboard';
+
+    // ヘルプモーダルの開閉
+    document.getElementById('openHelp').onclick = () => {
+        document.getElementById('helpOverlay').style.display = 'flex';
+    };
+    window.closeHelp = () => {
+        document.getElementById('helpOverlay').style.display = 'none';
+    };
+    document.getElementById('helpOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'helpOverlay') closeHelp();
+    });
+
+   // 💡 背景を切り替える関数（ストア確認画面にも連動するようにパワーアップ！）
+    function changePreviewBg(mode) {
+        currentBgMode = mode;
+        
+        // 全ての画像ボックス（新画面も含む）の背景クラスを一斉に書き換える
+        document.querySelectorAll('.preview-item-img-box').forEach(box => {
+            box.classList.remove('bg-mode-checkerboard', 'bg-mode-white', 'bg-mode-black', 'bg-mode-lightblue');
+            box.classList.add(`bg-mode-${mode}`);
+        });
+
+        // 全ての背景切り替えボタンのアクティブ状態（青色）を一斉にクリア
+        document.querySelectorAll('.bg-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // メイン画面・新画面問わず、クリックされたモードのボタンをすべて青くする
+        document.querySelectorAll('.bg-btn').forEach(btn => {
+            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(mode)) {
+                btn.classList.add('active');
+            }
+        });
+    }
     
     let projects = [], currentIndex = 0, selectedBox = null, isDragging = false, dragMode = 'move', offset = { x: 0, y: 0 }, globalIdCounter = 0, globalOrder = [], editMode = 'emoji';
 
@@ -270,13 +599,18 @@
         updateView(); refreshPreview(); updateStatusDisplay();
     };
 
+// デバイスがスマホ（タッチ操作）かどうかを判定
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     const sortConfig = {
         animation: 150,
         filter: '.del-btn',
         preventOnFilter: false,
-        delay: 200,              
-        delayOnTouchOnly: true,  
-        touchStartThreshold: 5,  
+        // ★PC・スマホに関わらず、ドラッグの基準は「.drag-handle」にする（CSS側で制御するため）
+        handle: '.drag-handle', 
+        delay: 0,
+        delayOnTouchOnly: false,
+        touchStartThreshold: 0,
         onEnd: function() {
             const list = this.el.id === 'fullSorterList' ? fullSorterList : globalPreviewContainer;
             const ids = Array.from(list.children).map(el => el.dataset.orderId);
@@ -367,8 +701,15 @@
         refreshPreview();
     }
 
-    function refreshPreview() {
-        [globalPreviewContainer, fullSorterList].forEach(container => {
+function refreshPreview() {
+        // 背景モードの安全ガード
+        const bg = currentBgMode || 'checkerboard';
+        
+        // 💡 修正したHTMLの「globalPreview」を安全に取得します
+        const mainContainer = document.getElementById('globalPreview');
+
+        [mainContainer, fullSorterList].forEach(container => {
+            if (!container) return; // 念のための安全ガード
             container.innerHTML = '';
             globalOrder.forEach((item, i) => {
                 const div = document.createElement('div');
@@ -377,7 +718,11 @@
                 div.innerHTML = `
                     <span class="badge">${String(item.sourceIndex).padStart(3,'0')}</span>
                     <button class="del-btn" onclick="removeBox('${item.orderId}')">×</button>
-                    <div class="preview-item-img-box checkerboard"><img src="${item.dataUrl}"></div>
+                    
+                    <div class="drag-handle">☰</div>
+                    
+                    <div class="preview-item-img-box bg-mode-${bg}"><img src="${item.dataUrl}"></div>
+                    
                     <div style="font-size:10px; color:#007bff; font-weight:bold;">→ ${String(i+1).padStart(editMode==='stamp'?2:3,'0')}</div>
                     <div class="btn-group">
                         ${editMode === 'stamp' ? `<button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'main')">メイン</button>` : ''}
@@ -388,7 +733,6 @@
             });
         });
     }
-
     window.removeBox = (oid) => { 
         saveState(); 
         globalOrder = globalOrder.filter(i => i.orderId !== oid); 
@@ -458,7 +802,12 @@
     document.getElementById('addBox').onclick = () => { if(!projects[currentIndex]) return; saveState(); const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320; projects[currentIndex].boxes.push({x:10, y:10, w:tw, h:th, id:++globalIdCounter}); sync(); draw(); };
     document.getElementById('prevBtn').onclick = () => { currentIndex--; updateView(); };
     document.getElementById('nextBtn').onclick = () => { currentIndex++; updateView(); };
-    document.getElementById('openSorter').onclick = () => { document.getElementById('sorterOverlay').style.display = 'flex'; refreshPreview(); };
+// 🔼 修正後（これに差し替えます）
+document.getElementById('openSorter').onclick = () => { 
+    document.getElementById('sorterOverlay').style.display = 'flex'; 
+    refreshPreview(); 
+    if (typeof changePreviewBg === 'function') changePreviewBg(currentBgMode || 'checkerboard'); // ★背景を再適用する命令を追加！
+};
     window.closeSorter = () => { document.getElementById('sorterOverlay').style.display = 'none'; };
 
     let tImg = new Image(), tx=0, ty=0, ts=1;
@@ -592,6 +941,125 @@
     };
 
     document.getElementById('resetOrder').onclick = () => { if (globalOrder.length === 0) return; if (!confirm("現在の並び順で番号を振り直しますか？")) return; saveState(); globalOrder.forEach((item, index) => { item.sourceIndex = index + 1; }); refreshPreview(); };
+// 💡 新機能：ストア確認モーダルを開く処理
+    document.getElementById('openStorePreview').onclick = () => { 
+        document.getElementById('storePreviewOverlay').style.display = 'flex'; 
+        refreshStorePreview(); 
+        // 開いた瞬間に、現在の背景色を綺麗に適用する
+        if (typeof changePreviewBg === 'function') changePreviewBg(currentBgMode || 'checkerboard'); 
+    };
+
+    // 💡 ストア確認モーダルを閉じる処理
+    window.closeStorePreview = () => { 
+        document.getElementById('storePreviewOverlay').style.display = 'none'; 
+    };
+
+// 💡 UI無しの純粋なスタンプ画像だけを綺麗に並べる関数（スマホ対応レスポンシブ版！）
+    function refreshStorePreview() {
+        const container = document.getElementById('storePreviewList');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const isEmoji = editMode === 'emoji';
+        
+        // 💡 スマホ画面（画面の横幅が500px未満）かどうかを自動判定します
+        const isMobile = window.innerWidth < 500;
+
+        let boxWidth, boxHeight;
+
+        // 💡 モード × 端末（PCかスマホか）に合わせて、並び方とサイズを自動で切り替える
+        if (isEmoji) {
+            if (isMobile) {
+                // 【スマホ×絵文字】ご希望通り、横に5個（5×8）並べる！
+                container.style.gridTemplateColumns = 'repeat(5, auto)';
+                container.style.gap = '6px';
+                boxWidth = '60px';  // スマホの画面幅に綺麗に収まるミニサイズ
+                boxHeight = '60px';
+            } else {
+                // 【PC×絵文字】広々と横に8個並べる
+                container.style.gridTemplateColumns = 'repeat(8, auto)';
+                container.style.gap = '8px';
+                boxWidth = '75px';
+                boxHeight = '75px';
+            }
+        } else {
+            if (isMobile) {
+                // 【スマホ×スタンプ】4列のまま、はみ出さないようにサイズと隙間をギュッと縮める！
+                container.style.gridTemplateColumns = 'repeat(4, auto)';
+                container.style.gap = '8px';
+                boxWidth = '72px';  // 4個並べてもスマホ画面にすっぽり収まるサイズ（72×4 = 288px）
+                boxHeight = '62px';
+            } else {
+                // 【PC×スタンプ】4列で本来のサイズでゆったり並べる
+                container.style.gridTemplateColumns = 'repeat(4, auto)';
+                container.style.gap = '16px';
+                boxWidth = '95px';
+                boxHeight = '82px';
+            }
+        }
+        
+        container.style.justifyContent = 'center'; 
+
+        globalOrder.forEach((item) => {
+            const div = document.createElement('div');
+            div.className = `preview-item-img-box bg-mode-${currentBgMode}`;
+            
+            // 自動計算されたサイズ（boxWidth / boxHeight）を適用
+            div.style.width = boxWidth;
+            div.style.height = boxHeight;
+            div.style.display = 'flex';
+            div.style.justifyContent = 'center';
+            div.style.alignItems = 'center';
+            div.style.borderRadius = '8px';
+            div.style.transition = 'none';
+            
+            const img = document.createElement('img');
+            img.src = item.dataUrl;
+            img.style.maxWidth = '90%';
+            img.style.maxHeight = '90%';
+            img.style.objectFit = 'contain';
+            
+            div.appendChild(img);
+            container.appendChild(div);
+        });
+    }
+// 💡 新機能：現在の元画像を、並び順や枠をキープしたまま最新版に差し替える処理
+    document.getElementById('updateSheetBtn').onclick = () => {
+        if (projects.length === 0) { 
+            alert("最初に画像を一括アップロードしてからご利用ください。"); 
+            return; 
+        }
+        document.getElementById('updateSheetInput').click();
+    };
+
+    document.getElementById('updateSheetInput').onchange = async (e) => {
+        if (!e.target.files[0] || !projects[currentIndex]) return;
+        
+        // 万が一のために、いつでも「元に戻す（Undo）」ができるように履歴に保存
+        saveState(); 
+        
+        // 新しい修正版画像を読み込む
+        const img = await new Promise(res => {
+            const r = new FileReader(); 
+            r.onload = (ev) => { 
+                const i = new Image(); 
+                i.onload = () => res(i); 
+                i.src = ev.target.result; 
+            }; 
+            r.readAsDataURL(e.target.files[0]);
+        });
+
+        // 既存の枠（boxes）や並び順（globalOrder）は一切壊さず、画像ソースだけを差し替え！
+        projects[currentIndex].img = img;
+        
+        // 新しい画像から、現在の枠の位置でスタンプ画像を自動で切り直し＆同期
+        sync(); 
+        updateView();
+        
+        // inputをクリア
+        e.target.value = '';
+        alert("元画像を最新版にアップデートしました！並び順や個別調整はすべて維持されています。");
+    };
 </script>
 </body>
 </html>
