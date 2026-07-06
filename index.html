@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINE クリエイターズエディタ</title>
-    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/gauge.js/1.3.7/gauge.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -129,7 +129,7 @@
         .badge { position: absolute; top: -5px; left: -5px; background: #666; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; font-weight: bold; z-index: 10; }
         .del-btn { position: absolute; top: 0; right: 0; background: #ff4d4d; color: white; border: none; font-size: 10px; cursor: pointer; border-radius: 0 6px 0 6px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; }
         
-        .btn-group { display: flex; gap: 2px; width: 100%; }
+        .btn-group { display: flex; gap: 2px; width: 100%; position: relative; z-index: 2; }
         .tab-btn { font-size: 9px; padding: 2px 0; cursor: pointer; background: #f8f8f8; border: 1px solid #ccc; flex: 1; border-radius: 4px; }
 
         /* ステータス周りのスタイル */
@@ -328,32 +328,32 @@
     <div style="display:flex; align-items:center; gap:12px;">
         <h3 style="margin:0; white-space:nowrap;">LINE エディタ</h3>
         <div class="mode-selector">
-            <label><input type="radio" name="mode" value="emoji" checked><span>絵文字</span></label>
-            <label><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
+            <label title="正方形（1:1）の枠でLINE絵文字用に切り出します"><input type="radio" name="mode" value="emoji" checked><span>絵文字</span></label>
+            <label title="LINEスタンプ比率（370:320）の枠で切り出します"><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
         </div>
-        <input type="file" id="upload" accept="image/*" multiple>
+        <input type="file" id="upload" accept="image/*" multiple title="素材シート画像を選択（複数選択可）">
         <button id="openHelp" class="help-btn" title="使い方ヘルプ">？</button>
     </div>
 
     <div style="display:flex; gap:12px; align-items:center;">
-        <button id="undoBtn" class="dark" disabled>↩️</button>
-        <button id="resetOrder" class="red">📍 確定</button>
+        <button id="undoBtn" class="dark" disabled title="直前の操作を取り消します">↩️</button>
+        <button id="resetOrder" class="red" title="現在の並び順で番号を振り直します">📍 確定</button>
         
         <div class="status-box">
             <div id="mainStatusItem" class="status-item">
                 <span class="status-label">メイン</span>
-                <img id="mainThumb" class="status-thumb checkerboard">
-                <label class="mini-upload-btn">別UP<input type="file" id="mainSpecificUpload" hidden accept="image/*"></label>
+                <img id="mainThumb" class="status-thumb checkerboard" title="設定済みのメイン画像（クリックで再調整）">
+                <label class="mini-upload-btn" title="任意の画像を直接アップロードしてメイン画像に設定">別UP<input type="file" id="mainSpecificUpload" hidden accept="image/*"></label>
             </div>
             <div class="status-item">
                 <span class="status-label">タブ</span>
-                <img id="tabThumb" class="status-thumb checkerboard">
-                <label class="mini-upload-btn">別UP<input type="file" id="tabSpecificUpload" hidden accept="image/*"></label>
+                <img id="tabThumb" class="status-thumb checkerboard" title="設定済みのタブ画像（クリックで再調整）">
+                <label class="mini-upload-btn" title="任意の画像を直接アップロードしてタブ画像に設定">別UP<input type="file" id="tabSpecificUpload" hidden accept="image/*"></label>
             </div>
         </div>
-        <button id="openStorePreview" style="background: #28a745; color: white; font-weight: bold;">ストア確認</button>
-        <button id="openSorter" class="orange">🔃 全表示</button>
-        <button id="downloadZip" class="blue">ZIP保存</button>
+        <button id="openStorePreview" style="background: #28a745; color: white; font-weight: bold;" title="UIを除いた画像だけをストア掲載時に近い見た目で確認">ストア確認</button>
+        <button id="openSorter" class="orange" title="検出された画像を大きな一覧で並べ替え">🔃 全表示</button>
+        <button id="downloadZip" class="blue" title="連番の画像とタブ・メイン画像をZIPでダウンロード">ZIP保存</button>
     </div>
 </div>
 
@@ -361,13 +361,13 @@
     <div class="editor-area"><canvas id="mainCanvas" class="checkerboard"></canvas></div>
     <div class="side-panel">
         <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <button id="prevBtn" class="secondary" disabled>前</button>
+            <button id="prevBtn" class="secondary" disabled title="前の元画像に切り替え">前</button>
             <span id="fileInfo" style="font-size:12px; flex:1; text-align:center; padding-top:8px;">画像を選択</span>
-            <button id="nextBtn" class="secondary" disabled>次</button>
+            <button id="nextBtn" class="secondary" disabled title="次の元画像に切り替え">次</button>
         </div>
-        <button id="addBox">＋ 枠を追加</button>
+        <button id="addBox" title="現在の画像に手動で枠を追加します">＋ 枠を追加</button>
 <input type="file" id="updateSheetInput" style="display:none;" accept="image/*">
-<button id="updateSheetBtn" style="background:#ffc107; color:#000; font-weight:bold; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; margin-left:5px;">画像を差し替え</button>
+<button id="updateSheetBtn" style="background:#ffc107; color:#000; font-weight:bold; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; margin-left:5px;" title="枠の位置や並び順はそのままに、元画像だけを新しいものに差し替えます">画像を差し替え</button>
     </div>
 </div>
 
@@ -376,10 +376,10 @@
     <div class="bg-selector-container">
         <span style="font-size: 12px; font-weight: bold; color: #555;">背景確認:</span>
         <div class="bg-selector-buttons">
-            <button class="bg-btn active" onclick="changePreviewBg('checkerboard')">格子</button>
-            <button class="bg-btn" onclick="changePreviewBg('white')">白</button>
-            <button class="bg-btn" onclick="changePreviewBg('black')">黒</button>
-            <button class="bg-btn" onclick="changePreviewBg('lightblue')">水色</button>
+            <button class="bg-btn active" onclick="changePreviewBg('checkerboard')" title="透過部分を格子柄で確認">格子</button>
+            <button class="bg-btn" onclick="changePreviewBg('white')" title="白背景での見え方を確認">白</button>
+            <button class="bg-btn" onclick="changePreviewBg('black')" title="黒背景での見え方を確認">黒</button>
+            <button class="bg-btn" onclick="changePreviewBg('lightblue')" title="LINEトーク画面風の背景で確認">水色</button>
         </div>
     </div>
 
