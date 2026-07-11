@@ -150,11 +150,11 @@
         .red { background: #dc3545; }
         .dark { background: #343a40; }
 
-        .mode-selector { background: #eee; padding: 5px; border-radius: 8px; display: flex; gap: 5px; }
-        .mode-selector label { font-size: 12px; padding: 5px 10px; cursor: pointer; border-radius: 5px; }
+        .mode-selector { background: #eee; padding: 3px; border-radius: 8px; display: flex; gap: 2px; flex-shrink: 0; }
+        .mode-selector label { font-size: 11px; padding: 4px 8px; cursor: pointer; border-radius: 5px; white-space: nowrap; }
         .mode-selector input { display: none; }
         .mode-selector input:checked + span { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: bold; }
-        .mode-selector span { display: block; padding: 4px 10px; border-radius: 4px; }
+        .mode-selector span { display: block; padding: 3px 8px; border-radius: 4px; }
 
         /* 全表示モーダル専用：高さを最適化 */
         #fullSorterList {
@@ -325,12 +325,17 @@
 <body>
 
 <div class="header">
-    <div style="display:flex; align-items:center; gap:12px;">
-        <h3 style="margin:0; white-space:nowrap;">LINE エディタ</h3>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <h3 style="margin:0; white-space:nowrap; font-size:15px;">LINE エディタ</h3>
         <div class="mode-selector">
             <label title="正方形（1:1）の枠でLINE絵文字用に切り出します"><input type="radio" name="mode" value="emoji" checked><span>絵文字</span></label>
             <label title="LINEスタンプ比率（370:320）の枠で切り出します"><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
+            <label title="超小さいスタンプ特集規格（184:160）の枠で切り出します"><input type="radio" name="mode" value="mini"><span>超小さい</span></label>
+            <label title="自分で指定した幅×高さの枠で切り出します"><input type="radio" name="mode" value="custom"><span>カスタム</span></label>
         </div>
+        <span id="customSizeInputs" style="display:none; align-items:center; gap:3px; font-size:11px; color:#555;">
+            <input type="number" id="customW" value="200" min="1" style="width:48px; padding:3px; font-size:11px;" title="幅(px)">×<input type="number" id="customH" value="200" min="1" style="width:48px; padding:3px; font-size:11px;" title="高さ(px)">px
+        </span>
         <input type="file" id="upload" accept="image/*" multiple title="素材シート画像を選択（複数選択可）">
         <button id="openHelp" class="help-btn" title="使い方ヘルプ">？</button>
     </div>
@@ -535,6 +540,17 @@
     
     let projects = [], currentIndex = 0, selectedBox = null, isDragging = false, dragMode = 'move', offset = { x: 0, y: 0 }, globalIdCounter = 0, globalOrder = [], editMode = 'emoji';
 
+    // 💡 各モードの出力サイズ設定（幅・高さ・比率）
+    const SIZE_CONFIG = {
+        emoji: { w: 180, h: 180, ratio: 1 },
+        stamp: { w: 370, h: 320, ratio: 370 / 320 },
+        mini:  { w: 184, h: 160, ratio: 184 / 160 },
+        custom: { w: 200, h: 200, ratio: 1 }
+    };
+    function getSize() { return SIZE_CONFIG[editMode] || SIZE_CONFIG.emoji; }
+    // 「スタンプ」系（メイン画像あり・2桁連番）かどうか
+    function isStampType() { return editMode === 'stamp' || editMode === 'mini' || editMode === 'custom'; }
+
     let finalTabBlob = null, lastTabDataUrl = null;
     let finalMainBlob = null, lastMainDataUrl = null;
     let subEditingTarget = 'tab'; 
@@ -543,12 +559,35 @@
         if (e.deltaY !== 0) { e.preventDefault(); globalPreviewContainer.scrollLeft += e.deltaY; }
     }, { passive: false });
 
+    const customWInput = document.getElementById('customW');
+    const customHInput = document.getElementById('customH');
+    const customSizeInputs = document.getElementById('customSizeInputs');
+
+    function updateCustomSize() {
+        const w = Math.max(1, parseInt(customWInput.value, 10) || 1);
+        const h = Math.max(1, parseInt(customHInput.value, 10) || 1);
+        SIZE_CONFIG.custom = { w, h, ratio: w / h };
+    }
+
+    [customWInput, customHInput].forEach(inp => {
+        inp.addEventListener('change', () => {
+            updateCustomSize();
+            if (editMode === 'custom' && projects.length > 0) {
+                saveState();
+                projects.forEach(p => { p.boxes = detectReliableRegions(p.img); });
+                sync(); updateView();
+            }
+        });
+    });
+
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (projects.length > 0 && !confirm("モードを切り替えると枠の設定がリセットされます。")) {
                 document.querySelector(`input[value="${editMode}"]`).checked = true; return;
             }
             editMode = e.target.value;
+            customSizeInputs.style.display = editMode === 'custom' ? 'inline-flex' : 'none';
+            if (editMode === 'custom') updateCustomSize();
             resetSpecials();
             projects.forEach(p => { p.boxes = detectReliableRegions(p.img); });
             sync(); updateView();
@@ -649,7 +688,7 @@
         let rows = []; for (let y = 0; y < h; y++) { let f = false; for (let x = 0; x < w; x++) { if (isC(x, y)) { f = true; break; } } rows.push(f); }
         let regionsY = [], sY = -1; for (let y = 0; y < h; y++) { if (rows[y] && sY === -1) sY = y; else if (!rows[y] && sY !== -1) { regionsY.push({y: sY, h: y - sY}); sY = -1; } }
         if (sY !== -1) regionsY.push({y: sY, h: h - sY});
-        let boxes = []; const ratio = editMode === 'emoji' ? 1 : 370/320;
+        let boxes = []; const ratio = getSize().ratio;
         regionsY.forEach(rY => {
             let cols = []; for (let x = 0; x < w; x++) { let f = false; for (let y = rY.y; y < rY.y + rY.h; y++) { if (isC(x, y)) { f = true; break; } } cols.push(f); }
             let sX = -1; for (let x = 0; x < w; x++) { if (cols[x] && sX === -1) sX = x; else if (!cols[x] && sX !== -1) { addRegionBox(sX, rY.y, x - sX, rY.h, boxes, w, h, ratio); sX = -1; } }
@@ -675,7 +714,7 @@
     }
 
     function getResizedDataUrl(img, b) {
-        const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320;
+        const { w: tw, h: th } = getSize();
         renderCanvas.width = tw; renderCanvas.height = th;
         rctx.clearRect(0,0,tw,th);
         const s = Math.min(tw/b.w, th/b.h);
@@ -724,9 +763,9 @@ function refreshPreview() {
                     
                     <div class="preview-item-img-box bg-mode-${bg}"><img src="${item.dataUrl}"></div>
                     
-                    <div style="font-size:10px; color:#007bff; font-weight:bold;">→ ${String(i+1).padStart(editMode==='stamp'?2:3,'0')}</div>
+                    <div style="font-size:10px; color:#007bff; font-weight:bold;">→ ${String(i+1).padStart(isStampType()?2:3,'0')}</div>
                     <div class="btn-group">
-                        ${editMode === 'stamp' ? `<button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'main')">メイン</button>` : ''}
+                        ${isStampType() ? `<button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'main')">メイン</button>` : ''}
                         <button class="tab-btn" onclick="openSubEditor('${item.orderId}', '${item.dataUrl}', 'tab')">タブ</button>
                     </div>
                 `;
@@ -788,7 +827,7 @@ function refreshPreview() {
         if(e.cancelable) e.preventDefault();
         const { px, py } = getCanvasPos(e);
         if(dragMode === 'move') { selectedBox.x = px - offset.x; selectedBox.y = py - offset.y; } 
-        else { const ratio = editMode === 'emoji' ? 1 : 370/320; const newW = Math.max(20, offset.sw + (px - offset.sx)); selectedBox.w = newW; selectedBox.h = newW / ratio; } draw(); 
+        else { const ratio = getSize().ratio; const newW = Math.max(20, offset.sw + (px - offset.sx)); selectedBox.w = newW; selectedBox.h = newW / ratio; } draw(); 
     }
 
     function onCanvasEnd() { if(isDragging) sync(); isDragging = false; }
@@ -800,7 +839,7 @@ function refreshPreview() {
     window.addEventListener('mouseup', onCanvasEnd);
     window.addEventListener('touchend', onCanvasEnd);
     
-    document.getElementById('addBox').onclick = () => { if(!projects[currentIndex]) return; saveState(); const tw = editMode === 'emoji' ? 180 : 370, th = editMode === 'emoji' ? 180 : 320; projects[currentIndex].boxes.push({x:10, y:10, w:tw, h:th, id:++globalIdCounter}); sync(); draw(); };
+    document.getElementById('addBox').onclick = () => { if(!projects[currentIndex]) return; saveState(); const { w: tw, h: th } = getSize(); projects[currentIndex].boxes.push({x:10, y:10, w:tw, h:th, id:++globalIdCounter}); sync(); draw(); };
     document.getElementById('prevBtn').onclick = () => { currentIndex--; updateView(); };
     document.getElementById('nextBtn').onclick = () => { currentIndex++; updateView(); };
 // 🔼 修正後（これに差し替えます）
@@ -925,17 +964,17 @@ document.getElementById('openSorter').onclick = () => {
         const mi = document.getElementById('mainStatusItem');
         if (finalMainBlob) { mt.src = URL.createObjectURL(finalMainBlob); mt.style.display = 'block'; } else { mt.style.display = 'none'; }
         if (finalTabBlob) { tt.src = URL.createObjectURL(finalTabBlob); tt.style.display = 'block'; } else { tt.style.display = 'none'; }
-        mi.style.display = editMode === 'stamp' ? 'flex' : 'none';
+        mi.style.display = isStampType() ? 'flex' : 'none';
     }
 
     document.getElementById('downloadZip').onclick = async () => {
         const zip = new JSZip();
-        const padLength = editMode === 'stamp' ? 2 : 3;
+        const padLength = isStampType() ? 2 : 3;
         globalOrder.forEach((item, i) => {
             zip.file(`${String(i + 1).padStart(padLength, '0')}.png`, item.dataUrl.split(',')[1], {base64: true});
         });
         if (finalTabBlob) zip.file("tab.png", finalTabBlob);
-        if (editMode === 'stamp' && finalMainBlob) zip.file("main.png", finalMainBlob);
+        if (isStampType() && finalMainBlob) zip.file("main.png", finalMainBlob);
         const blob = await zip.generateAsync({type: "blob"});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `line_${editMode}_pack.zip`; a.click();
