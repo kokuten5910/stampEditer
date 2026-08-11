@@ -986,10 +986,22 @@ document.getElementById('openSorter').onclick = () => {
             const file = new File([blob], filename, { type: 'application/zip' });
 
             // 💡 スマホ（iOS Safari / LINEアプリ内ブラウザ等）ではa.downloadでのBlob保存が
-            // 正しく機能せず中身が壊れることがあるため、Web Share APIが使えれば優先的に使う
+            // 正しく機能せず中身が壊れることがあるため、Web Share APIが使えれば優先的に使う。
+            // ただしZIP生成の待ち時間でユーザー操作の有効期限が切れて共有に失敗することがあるため、
+            // その場合は従来のダウンロード方式に自動でフォールバックする。
+            let shared = false;
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file], title: filename });
-            } else {
+                try {
+                    await navigator.share({ files: [file], title: filename });
+                    shared = true;
+                } catch (shareErr) {
+                    if (shareErr && shareErr.name === 'AbortError') {
+                        shared = true; // ユーザーが共有をキャンセルしただけなので何もしない
+                    }
+                    // それ以外のエラーはフォールバックへ
+                }
+            }
+            if (!shared) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = filename; a.style.display = 'none';
