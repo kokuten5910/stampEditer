@@ -968,16 +968,44 @@ document.getElementById('openSorter').onclick = () => {
     }
 
     document.getElementById('downloadZip').onclick = async () => {
-        const zip = new JSZip();
-        const padLength = isStampType() ? 2 : 3;
-        globalOrder.forEach((item, i) => {
-            zip.file(`${String(i + 1).padStart(padLength, '0')}.png`, item.dataUrl.split(',')[1], {base64: true});
-        });
-        if (finalTabBlob) zip.file("tab.png", finalTabBlob);
-        if (isStampType() && finalMainBlob) zip.file("main.png", finalMainBlob);
-        const blob = await zip.generateAsync({type: "blob"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `line_${editMode}_pack.zip`; a.click();
+        const btn = document.getElementById('downloadZip');
+        const originalText = btn.textContent;
+        btn.disabled = true; btn.textContent = '作成中...';
+        try {
+            const zip = new JSZip();
+            const padLength = isStampType() ? 2 : 3;
+            globalOrder.forEach((item, i) => {
+                zip.file(`${String(i + 1).padStart(padLength, '0')}.png`, item.dataUrl.split(',')[1], {base64: true});
+            });
+            if (finalTabBlob) zip.file("tab.png", finalTabBlob);
+            if (isStampType() && finalMainBlob) zip.file("main.png", finalMainBlob);
+
+            // 💡 mimeTypeとcompressionを明示し、環境によるzip破損を防ぐ
+            const blob = await zip.generateAsync({ type: "blob", mimeType: "application/zip", compression: "DEFLATE" });
+            const filename = `line_${editMode}_pack.zip`;
+            const file = new File([blob], filename, { type: 'application/zip' });
+
+            // 💡 スマホ（iOS Safari / LINEアプリ内ブラウザ等）ではa.downloadでのBlob保存が
+            // 正しく機能せず中身が壊れることがあるため、Web Share APIが使えれば優先的に使う
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: filename });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename; a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
+        } catch (err) {
+            if (err && err.name !== 'AbortError') {
+                console.error(err);
+                alert('ZIPの作成・保存に失敗しました。もう一度お試しください。');
+            }
+        } finally {
+            btn.disabled = false; btn.textContent = originalText;
+        }
     };
 
     document.getElementById('resetOrder').onclick = () => { if (globalOrder.length === 0) return; if (!confirm("現在の並び順で番号を振り直しますか？")) return; saveState(); globalOrder.forEach((item, index) => { item.sourceIndex = index + 1; }); refreshPreview(); };
