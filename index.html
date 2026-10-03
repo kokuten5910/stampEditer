@@ -201,6 +201,9 @@
             font-size: 10px !important;
         }
 
+        /* 全表示：✖ボタンを一時的に隠す */
+        #sorterOverlay.hide-del .del-btn { display: none !important; }
+
         /* スマホ向けレスポンシブスタイル */
         @media (max-width: 768px) {
             body { height: auto; overflow: auto; padding: 5px; }
@@ -405,7 +408,10 @@
 <div id="sorterOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; padding:20px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:#fff;">
         <h2 style="margin:0;">並べ替え（一覧）</h2>
-        <button onclick="closeSorter()" style="background:#fff; color:#000;">完了</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button id="toggleDelBtn" onclick="toggleSorterDel()" style="background:#fff; color:#000;" title="画像にかぶる ✖ ボタンを一時的に隠します（完了を押すと元に戻ります）">✖を隠す</button>
+            <button onclick="closeSorter()" style="background:#fff; color:#000;">完了</button>
+        </div>
     </div>
     <div id="fullSorterList" class="sorter-container" style="background:#fff; border-radius:15px; padding:20px; overflow-y:auto; flex:1; display:grid;"></div>
 </div>
@@ -935,7 +941,17 @@ document.getElementById('openSorter').onclick = () => {
     refreshPreview(); 
     if (typeof changePreviewBg === 'function') changePreviewBg(currentBgMode || 'checkerboard'); // ★背景を再適用する命令を追加！
 };
-    window.closeSorter = () => { document.getElementById('sorterOverlay').style.display = 'none'; };
+    window.toggleSorterDel = () => {
+        const hidden = document.getElementById('sorterOverlay').classList.toggle('hide-del');
+        document.getElementById('toggleDelBtn').textContent = hidden ? '✖を表示' : '✖を隠す';
+    };
+    window.closeSorter = () => {
+        const ov = document.getElementById('sorterOverlay');
+        ov.style.display = 'none';
+        // ✖の非表示は「一時的」なので、閉じたら元に戻す
+        ov.classList.remove('hide-del');
+        document.getElementById('toggleDelBtn').textContent = '✖を隠す';
+    };
 
     let tImg = new Image(), tx=0, ty=0, ts=1;
     function openSubEditor(orderId, dataUrl, type) {
