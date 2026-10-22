@@ -335,8 +335,9 @@
 <body>
 
 <div class="header">
-    <div style="display:flex; align-items:center; gap:8px;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <h3 style="margin:0; white-space:nowrap; font-size:15px;">LINE エディタ</h3>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
         <div class="mode-selector">
             <label title="正方形（1:1）の枠でLINE絵文字用に切り出します"><input type="radio" name="mode" value="emoji" checked><span>絵文字</span></label>
             <label title="LINEスタンプ比率（370:320）の枠で切り出します"><input type="radio" name="mode" value="stamp"><span>スタンプ</span></label>
@@ -346,11 +347,12 @@
         <span id="customSizeInputs" style="display:none; align-items:center; gap:3px; font-size:11px; color:#555;">
             <input type="number" id="customW" value="200" min="1" style="width:48px; padding:3px; font-size:11px;" title="幅(px)">×<input type="number" id="customH" value="200" min="1" style="width:48px; padding:3px; font-size:11px;" title="高さ(px)">px
         </span>
+        </div>
         <input type="file" id="upload" accept="image/*" multiple title="素材シート画像を選択（複数選択可）">
         <button id="openHelp" class="help-btn" title="使い方ヘルプ">？</button>
     </div>
 
-    <div style="display:flex; gap:12px; align-items:center;">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:flex-end; min-width:0;">
         <button id="undoBtn" class="dark" disabled title="直前の操作を取り消します">↩️</button>
         <button id="resetOrder" class="red" title="現在の並び順で番号を振り直します">📍 確定</button>
         
